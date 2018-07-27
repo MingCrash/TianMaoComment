@@ -6,7 +6,31 @@
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
+from scrapy.http import HtmlResponse
+from requests.cookies import cookiejar_from_dict
+from scrapy.conf import settings
+import requests
 
+
+class RequestByRequestsDownloadMiddleware(object):
+    #请求头是必须的
+    headers = {
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'accept-encoding': 'gzip',              #只要gzip的压缩格式
+        'accept-language': 'zh-CN,zh;q=0.9',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Safari/537.36'
+    }
+
+    #post登陆，保持会话状态
+    def __init__(self):
+        self.s = requests.session()
+        self.s.cookies = cookiejar_from_dict(cookie_dict=settings.get('MANUAL_COOKIES'))
+        super(RequestByRequestsDownloadMiddleware, self).__init__()
+
+    def process_request(self, request, spider):
+        htmlsorce = self.s.get(url=request.url, headers=self.headers)
+        # htmlsorce = requests.get(url=request.url, headers=self.headers,cookies=self.cookies)
+        return HtmlResponse(url=htmlsorce.url, body=htmlsorce.content, headers=htmlsorce.headers, request=request, status=htmlsorce.status_code)
 
 class TianmaocommentSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
